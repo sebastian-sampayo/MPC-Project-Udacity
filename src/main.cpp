@@ -9,8 +9,12 @@
 #include "MPC.h"
 #include "json.hpp"
 
+// DEBUG
+#define DEBUG
+
 // for convenience
 using json = nlohmann::json;
+using namespace std;
 
 // ------------------------------------------------------------------------------------------------
 // For converting back and forth between radians and degrees.
@@ -30,11 +34,6 @@ inline double dist(double x1, double y1, double x2, double y2) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// TODO: helper function to calculate slope in radians given 2 points.
-// Remember that the slope of a polynomial at a given point is the derivative at that point.
-// And we know that we are using polynomials, ans we know its order, so it's easy to calculate.
-
-// ------------------------------------------------------------------------------------------------
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 // else the empty string "" will be returned.
@@ -52,10 +51,26 @@ string hasData(string s) {
 
 // ------------------------------------------------------------------------------------------------
 // Evaluate a polynomial.
+// f(x) = sum_{i=0}^{P} coeffs(i) * x^i
+// with P = coeffs.size() - 1 = order of the polynomial
 double polyeval(Eigen::VectorXd coeffs, double x) {
   double result = 0.0;
   for (int i = 0; i < coeffs.size(); i++) {
     result += coeffs[i] * pow(x, i);
+  }
+  return result;
+}
+
+// ------------------------------------------------------------------------------------------------
+// TODO: helper function to calculate slope in radians given 2 points.
+// Remember that the slope of a polynomial at a given point is the derivative at that point.
+// And we know that we are using polynomials, ans we know its order, so it's easy to calculate.
+// f'(x) = sum_{i=1}^{P} coeffs(i) * i * x^{i-1}
+// with P = coeffs.size() - 1 = order of the polynomial
+double dpolyeval(Eigen::VectorXd coeffs, double x) {
+  double result = 0.0;
+  for (int i = 1; i < coeffs.size(); i++) {
+    result += coeffs[i] * i * pow(x, i-1);
   }
   return result;
 }
@@ -86,6 +101,20 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
 }
 
 // ------------------------------------------------------------------------------------------------
+// void transformWaypoints(Eigen::VectorXd& waypoints_car, const std::vector<double> waypoints_global, 
+                        // double px_global, double py_global, double psi_global) {
+  // // Transform waypoints from global coordinates to car coordinates
+  // // Rotation coord from global to car: ([T]^{CG}(psi))
+    // // [ cos(psi) sin(psi)
+    // //   -sin(psi) cos(psi)]
+  // // Translation:
+  // // waypoint_car = waypoint_global - carpos_global
+  // // [x]^C = [T]^{CG}(psi) * ([x]^G - [p]^G), where x is the waypoint and p the car position
+  
+  // const size_t waypoints_size = waypoints_global.size();
+// }
+
+// ------------------------------------------------------------------------------------------------
 int main() {
   uWS::Hub h;
 
@@ -107,18 +136,46 @@ int main() {
         if (event == "telemetry") {
           // j[1] is the data JSON object
           
-          // Waypoints
-          vector<double> ptsx = j[1]["ptsx"];
-          vector<double> ptsy = j[1]["ptsy"];
-          
-          // Fit the waypoints to a polynomial with order 3.
-          auto coeffs = polyfit(ptsx, ptsy, 3);
-          
-          // State
+          // State in global coordinates
           double px = j[1]["x"];
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
+          
+          // Waypoints in global coordinates
+          vector<double> ptsx = j[1]["ptsx"];
+          vector<double> ptsy = j[1]["ptsy"];
+          
+          // Fit a polynomial with order 3 to the waypoints.
+          const size_t waypoints_size = ptsx.size();
+          assert(waypoints_size == ptsy.size());
+          Eigen::VectorXd waypoints_x(waypoints_size);
+          Eigen::VectorXd waypoints_y(waypoints_size);
+            // Transform waypoints from global's coordinates to vehicle's coordinates
+            // Rotation coord from global to vehicle: ([T]^{CG}(psi))
+              // [ cos(psi) sin(psi)
+              //   -sin(psi) cos(psi)]
+            // Translation:
+            // waypoint_v = waypoint_g - carpos_g
+            // [x]^C = [T]^{CG}(psi) * ([x]^G - [p]^G), where x is the waypoint and p the car position
+          for (size_t i = 0; i < waypoints_size; ++i) {
+            const double dx = ptsx[i] - px;
+            const double dy = ptsy[i] - py;
+            waypoints_x(i) = cos(psi) * dx + sin(psi) * dy;
+            waypoints_y(i) = -sin(psi) * dx + cos(psi) * dy;
+          }
+          
+          auto coeffs = polyfit(waypoints_x, waypoints_y, 3);
+
+          
+          // CTE: 
+          // The minimum distance between the current position and the reference trajectory.
+          
+          
+          // Orientation error
+          // Calculate predicted path orientation, as the angle of the slope of the polynomial at that point. The slope is calculated with the derivative of the polynomial.
+          double dpy = dpolyeval(coeffs, px);
+          
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -143,16 +200,22 @@ int main() {
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
 
+          // Must be in vehicle's coordinate system
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
 
           //Display the waypoints/reference line
-          vector<double> next_x_vals;
-          vector<double> next_y_vals;
+          vector<double> next_x_vals(waypoints_size);
+          vector<double> next_y_vals(waypoints_size);
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
+          for (size_t i = 0; i < waypoints_size; ++i) {
+            next_x_vals[i] = waypoints_x(i);
+            next_y_vals[i] = waypoints_y(i);
+          }
 
+          // Must be in vehicle's coordinate system
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
 
