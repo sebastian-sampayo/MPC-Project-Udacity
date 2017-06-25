@@ -38,6 +38,7 @@ size_t epsi_start = cte_start + N;
 size_t delta_start = epsi_start + N;
 size_t a_start = delta_start + N - 1;
 
+// ------------------------------------------------------------------------------------------------
 class FG_eval {
  public:
   // Fitted polynomial coefficients
@@ -140,12 +141,14 @@ class FG_eval {
   }
 };
 
+// ------------------------------------------------------------------------------------------------
 //
 // MPC class definition implementation.
 //
 MPC::MPC() {}
 MPC::~MPC() {}
 
+// ------------------------------------------------------------------------------------------------
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   bool ok = true;
   size_t i = 0;

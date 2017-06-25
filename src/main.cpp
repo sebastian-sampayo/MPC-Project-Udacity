@@ -12,11 +12,29 @@
 // for convenience
 using json = nlohmann::json;
 
+// ------------------------------------------------------------------------------------------------
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
 double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
 
+// ------------------------------------------------------------------------------------------------
+/*
+ * Computes the Euclidean distance between two 2D points.
+ * @param (x1,y1) x and y coordinates of first point
+ * @param (x2,y2) x and y coordinates of second point
+ * @output Euclidean distance between two 2D points
+ */
+inline double dist(double x1, double y1, double x2, double y2) {
+  return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+}
+
+// ------------------------------------------------------------------------------------------------
+// TODO: helper function to calculate slope in radians given 2 points.
+// Remember that the slope of a polynomial at a given point is the derivative at that point.
+// And we know that we are using polynomials, ans we know its order, so it's easy to calculate.
+
+// ------------------------------------------------------------------------------------------------
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 // else the empty string "" will be returned.
@@ -32,6 +50,7 @@ string hasData(string s) {
   return "";
 }
 
+// ------------------------------------------------------------------------------------------------
 // Evaluate a polynomial.
 double polyeval(Eigen::VectorXd coeffs, double x) {
   double result = 0.0;
@@ -41,6 +60,7 @@ double polyeval(Eigen::VectorXd coeffs, double x) {
   return result;
 }
 
+// ------------------------------------------------------------------------------------------------
 // Fit a polynomial.
 // Adapted from
 // https://github.com/JuliaMath/Polynomials.jl/blob/master/src/Polynomials.jl#L676-L716
@@ -65,6 +85,7 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   return result;
 }
 
+// ------------------------------------------------------------------------------------------------
 int main() {
   uWS::Hub h;
 
@@ -85,8 +106,15 @@ int main() {
         string event = j[0].get<string>();
         if (event == "telemetry") {
           // j[1] is the data JSON object
+          
+          // Waypoints
           vector<double> ptsx = j[1]["ptsx"];
           vector<double> ptsy = j[1]["ptsy"];
+          
+          // Fit the waypoints to a polynomial with order 3.
+          auto coeffs = polyfit(ptsx, ptsy, 3);
+          
+          // State
           double px = j[1]["x"];
           double py = j[1]["y"];
           double psi = j[1]["psi"];
@@ -100,6 +128,7 @@ int main() {
           */
           double steer_value;
           double throttle_value;
+          
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
