@@ -1,30 +1,14 @@
 #include "MPC.h"
 #include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
+#include <time.h>
+
 #include "Eigen-3.3/Eigen/Core"
+#include "globals.h"
+#include "utils.h"
 
 using CppAD::AD;
-
-// TODO: Set the timestep length and duration
-size_t N = 25;
-double dt = 0.05;
-// => T = 1.25 s
-
-// This value assumes the model presented in the classroom is used.
-//
-// It was obtained by measuring the radius formed by running the vehicle in the
-// simulator around in a circle with a constant steering angle and velocity on a
-// flat terrain.
-//
-// Lf was tuned until the the radius formed by the simulating the model
-// presented in the classroom matched the previous radius.
-//
-// This is the length from front to CoG that has a similar radius.
-const double Lf = 2.67;
-
-// Both the reference cross track and orientation errors are 0.
-// The reference velocity is set to 40 mph.
-double ref_v = 40;
+using namespace std;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -53,28 +37,33 @@ class FG_eval {
     // the Solver function below.
     
     size_t t = 0;
-
+    
+    // Reduce the speed reference for turns
+    const double x = N*dt * 0.9; // evaluate the radius at a point in the future
+    const double ref_v = calculate_ref_v(coeffs, x, vars[cte_start + t], vars[epsi_start + t]); // higher for straight lines, lower for turns.
+    // const double ref_v = ref_v_max;
+    
     // The cost is stored is the first element of `fg`.
     // Any additions to the cost should be added to `fg[0]`.
     fg[0] = 0;
 
     // The part of the cost based on the reference state.
     for (t = 0; t < N; t++) {
-      fg[0] += CppAD::pow(vars[cte_start + t], 2);
-      fg[0] += CppAD::pow(vars[epsi_start + t], 2);
-      fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
+      fg[0] += 1 * CppAD::pow(vars[cte_start + t], 2);
+      fg[0] += 50 * CppAD::pow(vars[epsi_start + t], 2);
+      fg[0] += 2 * CppAD::pow(vars[v_start + t] - ref_v, 2);
     }
 
     // Minimize the use of actuators.
     for (t = 0; t < N - 1; t++) {
-      fg[0] += CppAD::pow(vars[delta_start + t], 2);
-      fg[0] += CppAD::pow(vars[a_start + t], 2);
+      fg[0] += 1200 * CppAD::pow(vars[delta_start + t], 2);
+      fg[0] += 10 * CppAD::pow(vars[a_start + t], 2);
     }
 
     // Minimize the value gap between sequential actuations.
     for (t = 0; t < N - 2; t++) {
-      fg[0] += CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
-      fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
+      fg[0] += 1000 * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
+      fg[0] += 1 * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
     }
 
     //
@@ -116,8 +105,8 @@ class FG_eval {
       AD<double> delta0 = vars[delta_start + t - 1];
       AD<double> a0 = vars[a_start + t - 1];
 
-      AD<double> f0 = coeffs[0] + coeffs[1] * x0;
-      AD<double> psides0 = CppAD::atan(coeffs[1]);
+      AD<double> f0 = polyeval(coeffs, x0);
+      AD<double> psides0 = CppAD::atan(dpolyeval(coeffs, x0));//CppAD::atan(coeffs[1]);
 
       // Here's `x` to get you started.
       // The idea here is to constraint this value to be 0.
@@ -149,7 +138,9 @@ MPC::MPC() {}
 MPC::~MPC() {}
 
 // ------------------------------------------------------------------------------------------------
-vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
+vector<vector<double>> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
+  const clock_t begin_time = clock();
+  
   bool ok = true;
   size_t i = 0;
   typedef CPPAD_TESTVECTOR(double) Dvector;
@@ -266,18 +257,40 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // Check some of the solution values
   ok &= solution.status == CppAD::ipopt::solve_result<Dvector>::success;
 
-  // Cost
-  auto cost = solution.obj_value;
-  std::cout << "Cost " << cost << std::endl;
+  vector<double> path_x(N);
+  vector<double> path_y(N);
+  
+  for (size_t i = 0; i < N; ++i) {
+    path_x[i] = solution.x[x_start + i];
+    path_y[i] = solution.x[y_start + i];
+  }
 
   // TODO: Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
   //
   // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
   // creates a 2 element double vector.
-  // Return all the state variables and actuators
-  return {solution.x[x_start + 1],   solution.x[y_start + 1],
-          solution.x[psi_start + 1], solution.x[v_start + 1],
-          solution.x[cte_start + 1], solution.x[epsi_start + 1],
-          solution.x[delta_start],   solution.x[a_start]};
+  // Return 3 vectors: one for the actuator values and two others for the predicted trajectory
+  // Consider actuator latency and control algorithm elapsed time :
+  const double elapsed_time = float( clock () - begin_time ) / CLOCKS_PER_SEC; 
+  // const double total_lag = actuator_lag + elapsed_time;
+  // const double total_lag = actuator_lag;
+  const int idx_lag = std::min(size_t(std::round(elapsed_time/dt)), N-1);
+  // const int idx_lag = 0;
+  vector<double> actuators = {
+    solution.x[delta_start + idx_lag],
+    solution.x[a_start + idx_lag]
+  };
+
+  // Cost
+  #ifdef DEBUG
+    auto cost = solution.obj_value;
+    cout << "Cost: " << cost << endl;
+    cout << "Elapsed time: " << elapsed_time << endl;
+    if (idx_lag == N-1) {
+      cout << "---- N too small !!" << endl;
+    }
+  #endif
+
+  return {actuators, path_x, path_y};
 }
