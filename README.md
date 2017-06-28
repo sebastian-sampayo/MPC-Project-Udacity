@@ -14,6 +14,11 @@ MPC Controller Project - Self-Driving Car Engineer Nanodegree - Udacity
 
 [//]: # (Image References)
 [simulation]: ./img/turn80mph.png
+[x]: ./img/x.gif
+[y]: ./img/y.gif
+[v]: ./img/v.gif
+[psi]: ./img/psi.gif
+
 
 ## Results
 
@@ -43,6 +48,19 @@ Regarding the tuning of N and dt hyperparameters, we would like that the predict
 However, we also want dt to be small, so that the discrete solution of the algorithm approximates better to the continuous reference path making the system more accurate. 
 
 Then, having set the horizon T of 1 or 2 seconds, we have a trade-off between N and dt, where we would like to have low computational cost, but significant approximation.
+
+### Vehicle Model
+As I mentioned above, I used the kinematic model of a car to predict the behavior of the vehicle. The state in this system consist of the _x_ and _y_ position, the magnitude of the velocity (_v_) and the orientation (_psi_):
+
+![x equation][x]
+
+![y equation][y]
+
+![v equation][v]
+
+![psi equation][psi]
+
+
 
 ## Dependencies
 
