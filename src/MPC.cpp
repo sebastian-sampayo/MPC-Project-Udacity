@@ -1,3 +1,14 @@
+/****************************************************************************\
+ * Udacity Nanodegree: Self-Driving Car Engineering - December cohort
+ * Project 10: MPC
+ * Date: 27th June 2017
+ * 
+ * Author: Sebastián Lucas Sampayo
+ * e-mail: sebisampayo@gmail.com
+ * file: MPC.cpp
+ * Description: Implementation of the class MPC
+\****************************************************************************/
+
 #include "MPC.h"
 #include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
@@ -9,6 +20,10 @@
 
 using CppAD::AD;
 using namespace std;
+
+// TODO - Refactoring:
+//  - Move all the code in the main.cpp to a group of methods inside MPC class to make the code cleaner.
+//  - Measure the latency dynamically.
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -31,18 +46,14 @@ class FG_eval {
 
   typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
   void operator()(ADvector& fg, const ADvector& vars) {
-    // TODO: implement MPC
     // `fg` a vector of the cost constraints, `vars` is a vector of variable values (state & actuators)
-    // NOTE: You'll probably go back and forth between this function and
-    // the Solver function below.
-    
-    size_t t = 0;
-    
+    size_t t = 0; // auxiliary variable used to iterate over time
+
     // Reduce the speed reference for turns
+    // higher for straight lines, lower for turns.
     const double x = N*dt * 0.9; // evaluate the radius at a point in the future
-    const double ref_v = calculate_ref_v(coeffs, x, vars[cte_start + t], vars[epsi_start + t]); // higher for straight lines, lower for turns.
-    // const double ref_v = ref_v_max;
-    
+    const double ref_v = calculate_ref_v(coeffs, x, vars[cte_start + t], vars[epsi_start + t]);
+
     // The cost is stored is the first element of `fg`.
     // Any additions to the cost should be added to `fg[0]`.
     fg[0] = 0;
@@ -66,11 +77,7 @@ class FG_eval {
       fg[0] += 1 * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
     }
 
-    //
     // Setup Constraints
-    //
-    // NOTE: In this section you'll setup the model constraints.
-
     // Initial constraints
     //
     // We add 1 to each of the starting indices due to cost being located at
@@ -106,11 +113,8 @@ class FG_eval {
       AD<double> a0 = vars[a_start + t - 1];
 
       AD<double> f0 = polyeval(coeffs, x0);
-      AD<double> psides0 = CppAD::atan(dpolyeval(coeffs, x0));//CppAD::atan(coeffs[1]);
+      AD<double> psides0 = CppAD::atan(dpolyeval(coeffs, x0));
 
-      // Here's `x` to get you started.
-      // The idea here is to constraint this value to be 0.
-      //
       // Recall the equations for the model:
       // x_[t+1] = x[t] + v[t] * cos(psi[t]) * dt
       // y_[t+1] = y[t] + v[t] * sin(psi[t]) * dt
@@ -140,7 +144,7 @@ MPC::~MPC() {}
 // ------------------------------------------------------------------------------------------------
 vector<vector<double>> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   const clock_t begin_time = clock();
-  
+
   bool ok = true;
   size_t i = 0;
   typedef CPPAD_TESTVECTOR(double) Dvector;
@@ -152,13 +156,12 @@ vector<vector<double>> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
   double cte = state[4];
   double epsi = state[5];
 
-  // TODO: Set the number of model variables (includes both states and inputs).
+  // Set the number of model variables (includes both states and inputs).
   // For example: If the state is a 4 element vector, the actuators is a 2
   // element vector and there are 10 timesteps. The number of variables is:
-  //
   // 4 * 10 + 2 * 9
   size_t n_vars = N * 6 + (N - 1) * 2;
-  // TODO: Set the number of constraints
+  // Set the number of constraints
   size_t n_constraints = N * 6;
 
   // Initial value of the independent variables.
@@ -178,7 +181,7 @@ vector<vector<double>> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
 
   Dvector vars_lowerbound(n_vars);
   Dvector vars_upperbound(n_vars);
-  // TODO: Set lower and upper limits for variables.
+  // Set lower and upper limits for variables.
   // Set all non-actuators upper and lowerlimits
   // to the max negative and positive values.
   for (i = 0; i < delta_start; i++) {
@@ -188,14 +191,12 @@ vector<vector<double>> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
   
   // The upper and lower limits of delta are set to -25 and 25
   // degrees (values in radians).
-  // NOTE: Feel free to change this to something else.
   for (i = delta_start; i < a_start; i++) {
     vars_lowerbound[i] = -0.436332;
     vars_upperbound[i] = 0.436332;
   }
 
   // Acceleration/decceleration upper and lower limits.
-  // NOTE: Feel free to change this to something else.
   for (i = a_start; i < n_vars; i++) {
     vars_lowerbound[i] = -1.0;
     vars_upperbound[i] = 1.0;
@@ -228,9 +229,6 @@ vector<vector<double>> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
   // object that computes objective and constraints
   FG_eval fg_eval(coeffs);
 
-  //
-  // NOTE: You don't have to worry about these options
-  //
   // options for IPOPT solver
   std::string options;
   // Uncomment this if you'd like more print information
@@ -257,26 +255,19 @@ vector<vector<double>> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
   // Check some of the solution values
   ok &= solution.status == CppAD::ipopt::solve_result<Dvector>::success;
 
+  // Return 3 vectors: one for the actuator values and two others for the predicted trajectory
+  // Predicted trajectory:
   vector<double> path_x(N);
   vector<double> path_y(N);
-  
+
   for (size_t i = 0; i < N; ++i) {
     path_x[i] = solution.x[x_start + i];
     path_y[i] = solution.x[y_start + i];
   }
 
-  // TODO: Return the first actuator values. The variables can be accessed with
-  // `solution.x[i]`.
-  //
-  // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
-  // creates a 2 element double vector.
-  // Return 3 vectors: one for the actuator values and two others for the predicted trajectory
-  // Consider actuator latency and control algorithm elapsed time :
+  // Consider the control algorithm elapsed time when outputting the next actuator values:
   const double elapsed_time = float( clock () - begin_time ) / CLOCKS_PER_SEC; 
-  // const double total_lag = actuator_lag + elapsed_time;
-  // const double total_lag = actuator_lag;
   const int idx_lag = std::min(size_t(std::round(elapsed_time/dt)), N-1);
-  // const int idx_lag = 0;
   vector<double> actuators = {
     solution.x[delta_start + idx_lag],
     solution.x[a_start + idx_lag]

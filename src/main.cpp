@@ -1,3 +1,15 @@
+/****************************************************************************\
+ * Udacity Nanodegree: Self-Driving Car Engineering - December cohort
+ * Project 10: MPC
+ * Date: 27th June 2017
+ * 
+ * Author: Sebastián Lucas Sampayo
+ * e-mail: sebisampayo@gmail.com
+ * file: main.cpp
+ * Description: Main function of the MPC project. Implements the interface 
+ *    between the simulator and the MPC algorithm.
+\****************************************************************************/
+
 #include <math.h>
 #include <uWS/uWS.h>
 #include <chrono>
@@ -62,15 +74,15 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
-          v = v * 0.447; // convert from mph to m/s
+          v = v * MPH2MS; // convert from mph to m/s
           
-          // Predict state after latency before passing to the solver
-          double steer_angle = j[1]["steering_angle"]; // previous actuator value
-          double throttle = j[1]["throttle"]; // previous actuator value
+          // Propagate the model for an interval of time equal to the latency before calling the control algorithm.
+          double steer_angle = j[1]["steering_angle"]; // last actuator value
+          double throttle = j[1]["throttle"]; // last actuator value
           steer_angle = -steer_angle; // Simulator stuff
-          px += v * cos(psi) * actuator_lag; // x0 + v0 * cos(psi0) * dt
+          px += v * cos(psi) * actuator_lag;
           py += v * sin(psi) * actuator_lag;
-          psi += v * steer_angle * actuator_lag / Lf; // psi0 + v0 * delta0 / Lf * dt
+          psi += v * steer_angle * actuator_lag / Lf;
           v += throttle * actuator_lag;
           
           // Waypoints in global coordinates
@@ -81,18 +93,19 @@ int main() {
           // Note: Here we are assuming 2 things:
           //  1) The first waypoint is the closest point in the reference trajectory to the current position
           //  2) The current orientation of the vehicle is approximately the same as the orientation of the reference trajectory at the current position.
-          // This may lead to inestability issues. To overcome this we could find the exact point in the reference trajectory closest to the current position, and calculate the orientation of the trajectory at that point.
+          // This may lead to inestability issues. 
+          // TODO: To overcome this we could find the exact point in the reference trajectory closest to the current position, and calculate the orientation of the trajectory at that point. That way, the yellow line would be absolutely stable (as it should be, because it's a static reference).
           const size_t waypoints_size = ptsx.size();
           assert(waypoints_size == ptsy.size());
           Eigen::VectorXd waypoints_x(waypoints_size);
           Eigen::VectorXd waypoints_y(waypoints_size);
             // Transform waypoints from global's coordinates to vehicle's coordinates
-            // Rotation coord from global to vehicle: ([T]^{CG}(psi))
+            // Rotation coord from global to vehicle: ([T]^{VG}(psi))
               // [ cos(psi) sin(psi)
               //   -sin(psi) cos(psi)]
             // Translation:
             // waypoint_v = waypoint_g - carpos_g
-            // [x]^C = [T]^{CG}(psi) * ([x]^G - [p]^G), where x is the waypoint and p the car position
+            // [x]^V = [T]^{VG}(psi) * ([x]^G - [p]^G), where x is the waypoint and p the vehicle position
           for (size_t i = 0; i < waypoints_size; ++i) {
             const double dx = ptsx[i] - px;
             const double dy = ptsy[i] - py;
@@ -104,41 +117,36 @@ int main() {
 
           // CTE: 
           // The minimum distance between the reference trajectory and the current position .
+          // Note: Read the assumption I mentioned above.
           const double cte = polyeval(coeffs, 0);
           
           // Orientation error
           // Calculate predicted path orientation, as the angle of the slope of the polynomial at that point. The slope is calculated with the derivative of the polynomial.
+          // Note: Read the assumption I mentioned above.
           const double dpy = dpolyeval(coeffs, 0);
           const double epsi = - atan(dpy);
 
-          /*
-          * TODO: Calculate steering angle and throttle using MPC.
-          *
-          * Both are in between [-1, 1].
-          *
-          */
+          // Call the MPC algorithm to calculate steering angle and throttle.
           Eigen::VectorXd state(6);
           // Position and orientation are null in vehicle's coordinate system.
           state << 0, 0, 0, v, cte, epsi;
-          
+
           auto solution = mpc.Solve(state, coeffs);
-          
+
           const double steer_value = solution[0][0];
           const double throttle_value = solution[0][1];
 
           json msgJson;
-          // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
-          // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
+          // Steering command in the simulator whould be between [-1, 1], so we divide by the max possible value: 25 degrees.
           msgJson["steering_angle"] = -steer_value / deg2rad(25); // need to multiply by -1 for the simulator.
           msgJson["throttle"] = throttle_value;
 
           //Display the MPC predicted trajectory 
-          //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
-          // the points in the simulator are connected by a Green line
+          // This points are in reference to the vehicle's coordinate system
+          // and are connected by a Green line
           const vector<double>& mpc_x_vals = solution[1];
           const vector<double>& mpc_y_vals = solution[2];
 
-          // Must be in vehicle's coordinate system
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
 
@@ -146,17 +154,15 @@ int main() {
           vector<double> next_x_vals(waypoints_size);
           vector<double> next_y_vals(waypoints_size);
 
-          //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
-          // the points in the simulator are connected by a Yellow line
+          // This points are in reference to the vehicle's coordinate system
+          // and are connected by a Yellow line
           for (size_t i = 0; i < waypoints_size; ++i) {
             next_x_vals[i] = waypoints_x(i);
             next_y_vals[i] = waypoints_y(i);
           }
 
-          // Must be in vehicle's coordinate system
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
-
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           #ifdef DEBUG
@@ -164,13 +170,10 @@ int main() {
           #endif
           // Latency
           // The purpose is to mimic real driving conditions where
-          // the car does actuate the commands instantly.
+          // the car does not actuate the commands instantly.
           //
           // Feel free to play around with this value but should be to drive
           // around the track with 100ms latency.
-          //
-          // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
-          // SUBMITTING.
           this_thread::sleep_for(chrono::milliseconds(int(actuator_lag*1000)));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }

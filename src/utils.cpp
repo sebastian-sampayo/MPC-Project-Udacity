@@ -1,3 +1,14 @@
+/****************************************************************************\
+ * Udacity Nanodegree: Self-Driving Car Engineering - December cohort
+ * Project 10: MPC
+ * Date: 27th June 2017
+ * 
+ * Author: Sebastián Lucas Sampayo
+ * e-mail: sebisampayo@gmail.com
+ * file: utils.cpp
+ * Description: Implementation of utils.h (Read header for more description)
+\****************************************************************************/
+
 #include "utils.h"
 
 #include <math.h>
@@ -14,20 +25,11 @@ double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
 
 // ------------------------------------------------------------------------------------------------
-/*
- * Computes the Euclidean distance between two 2D points.
- * @param (x1,y1) x and y coordinates of first point
- * @param (x2,y2) x and y coordinates of second point
- * @output Euclidean distance between two 2D points
- */
 inline double dist(double x1, double y1, double x2, double y2) {
   return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
 
 // ------------------------------------------------------------------------------------------------
-// Evaluate a polynomial.
-// f(x) = sum_{i=0}^{P} coeffs(i) * x^i
-// with P = coeffs.size() - 1 = order of the polynomial
 double polyeval(Eigen::VectorXd coeffs, double x) {
   double result = 0.0;
   for (int i = 0; i < coeffs.size(); i++) {
@@ -46,11 +48,6 @@ CppAD::AD<double> polyeval(Eigen::VectorXd coeffs, CppAD::AD<double> x) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// TODO: helper function to calculate slope in radians given 2 points.
-// Remember that the slope of a polynomial at a given point is the derivative at that point.
-// And we know that we are using polynomials, ans we know its order, so it's easy to calculate.
-// f'(x) = sum_{i=1}^{P} coeffs(i) * i * x^{i-1}
-// with P = coeffs.size() - 1 = order of the polynomial
 double dpolyeval(Eigen::VectorXd coeffs, double x) {
   double result = 0.0;
   for (int i = 1; i < coeffs.size(); i++) {
@@ -69,8 +66,6 @@ CppAD::AD<double> dpolyeval(Eigen::VectorXd coeffs, CppAD::AD<double> x) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// f''(x) = sum_{i=2}^{P} coeffs(i) * i (i-1) * x^{i-2}
-// with P = coeffs.size() - 1 = order of the polynomial
 double ddpolyeval(Eigen::VectorXd coeffs, double x) {
   double result = 0.0;
   for (int i = 2; i < coeffs.size(); i++) {
@@ -80,9 +75,6 @@ double ddpolyeval(Eigen::VectorXd coeffs, double x) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Fit a polynomial.
-// Adapted from
-// https://github.com/JuliaMath/Polynomials.jl/blob/master/src/Polynomials.jl#L676-L716
 Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
                         int order) {
   assert(xvals.size() == yvals.size());
@@ -105,22 +97,6 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
 }
 
 // ------------------------------------------------------------------------------------------------
-// void transformWaypoints(Eigen::VectorXd& waypoints_car, const std::vector<double> waypoints_global, 
-                        // double px_global, double py_global, double psi_global) {
-  // // Transform waypoints from global coordinates to car coordinates
-  // // Rotation coord from global to car: ([T]^{CG}(psi))
-    // // [ cos(psi) sin(psi)
-    // //   -sin(psi) cos(psi)]
-  // // Translation:
-  // // waypoint_car = waypoint_global - carpos_global
-  // // [x]^C = [T]^{CG}(psi) * ([x]^G - [p]^G), where x is the waypoint and p the car position
-  
-  // const size_t waypoints_size = waypoints_global.size();
-// }
-
-// ------------------------------------------------------------------------------------------------
-// Remember that the radius of curvature of a polynomial at a given point is the second derivative at that point.
-// And we know that we are using polynomials, ans we know its order, so it's easy to calculate.
 double calculate_ref_v(Eigen::VectorXd coeffs, double x, CppAD::AD<double> cte, CppAD::AD<double> epsi) {
   const double df = dpolyeval(coeffs, x); // first derivative
   const double ddf = ddpolyeval(coeffs, x); // second derivative
