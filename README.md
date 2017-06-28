@@ -31,10 +31,18 @@ In order to test the controller I used a visualization tool provided by Udacity 
 
 The program receives in each step a list of waypoints of the desired trajectory (yellow line). Then, it calculates the reference path (green line) that the car should follow to align with the waypoints path (yellow line). Considering the kinematic model of the car, it solves the non-linear problem to output the actuators values for each time step and pass them to the simulator input. In this case, the actuators consist of the steering angle and the throttle. After a lot of tuning, the vehicle is able to drive safely at a maximum of 93mph, speeding down to 60mph when it makes a turn. It is also possible to adjust a little bit the parameters in order to increase the speed even more.
 
+#### Speed control
 In order to go further with this project, I also implemented an algorithm to tune the reference velocity dynamically, so that the car speeds down when a turn is coming. This is a natural reaction of a human driver that is not strictly considered by the MPC algorithm.
 
+#### Latency
 Furthermore, there is also a delay time of 100ms between the command of the actuators and the actual execution in the simulator, which emulates what happens in the real world. This was taken into account in the algorithm achieving a great result.
 
+#### Hyperparameters
+Regarding the tuning of N and dt hyperparameters, we would like that the prediction horizon (T = N * dt) be large, so that the car can act in advance as soon as possible. It is very common to find in the literature that a duration of a few seconds is enough in automotive applications. This invites us to make N large, though increasing the computational cost.
+
+However, we also want dt to be small, so that the discrete solution of the algorithm approximates better to the continuous reference path making the system more accurate. 
+
+Then, having set the horizon T of 1 or 2 seconds, we have a trade-off between N and dt, where we would like to have low computational cost, but significant approximation.
 
 ## Dependencies
 
