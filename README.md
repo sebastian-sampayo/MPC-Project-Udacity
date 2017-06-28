@@ -18,6 +18,8 @@ MPC Controller Project - Self-Driving Car Engineer Nanodegree - Udacity
 [y]: ./img/y.gif
 [v]: ./img/v.gif
 [psi]: ./img/psi.gif
+[cte_t]: ./img/cte_t.gif
+[cte3]: ./img/cte3.gif
 
 
 ## Results
@@ -60,6 +62,17 @@ As I mentioned above, I used the kinematic model of a car to predict the behavio
 
 ![psi equation][psi]
 
+#### Errors
+The cross-track error is the difference between the reference trajectory and the current vehicle's position. However, we are going to make some assumptions to make our lives easier:
+- The orientation of the car is approximately the same as the reference trajectory (which means that the orientation error is zero). This means that the point in the path closest to the current position at time _t_ is f(t), so we can calculate this error at time _t_ as:
+
+![cte_t equation][cte_t]
+
+- If we think of the reference path as a straight line, the evolution of this error can be described with the following equation:
+
+![cte equation][cte3]
+
+Actually, we are using a 3rd order polynomial to calculate the reference path based on the waypoints, but this approximation still applies if we focus on a single time step (we can think of the polynomial as a chain of straight line segments).
 
 
 ## Dependencies
