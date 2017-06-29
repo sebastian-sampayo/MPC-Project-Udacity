@@ -22,6 +22,9 @@ MPC Controller Project - Self-Driving Car Engineer Nanodegree - Udacity
 [cte3]: ./img/cte3.gif
 [epsi_t]: ./img/epsi_t.gif
 [epsi2]: ./img/epsi2.gif
+[state]: ./img/aug_state.gif
+[assumptions]: ./img/assumptions.png
+[u]: ./img/u.png
 
 
 ## Results
@@ -54,7 +57,7 @@ However, we also want dt to be small, so that the discrete solution of the algor
 Then, having set the horizon T of 1 or 2 seconds, we have a trade-off between N and dt, where we would like to have low computational cost, but significant approximation.
 
 ### Vehicle Model
-As I mentioned above, I used the kinematic model of a car to predict the behavior of the vehicle. The state in this system consist of the _x_ and _y_ position, the magnitude of the velocity (_v_) and the orientation (_psi_):
+As I mentioned above, I used the kinematic model of the car to predict the behavior of the vehicle. I am not considering any lateral or longitudinal forces applied to the vehicle, so it's not the ultimate solution, but it's close enough. The state in this system consist of the _x_ and _y_ position, the magnitude of the velocity (_v_) and the orientation (_psi_):
 
 ![x equation][x]
 
@@ -67,24 +70,45 @@ As I mentioned above, I used the kinematic model of a car to predict the behavio
 #### Errors
 ##### Cross-track error
 The cross-track error is the difference between the reference trajectory and the current vehicle's position. However, I am making some assumptions to make it easier:
-- The orientation of the car is approximately the same as the reference trajectory (which means that the orientation error is zero). This means that the point in the path closest to the current position at time _t_ is f(t), so we can calculate this error at time _t_ as:
+- The point in the path closest to the current position at time _t_ is f(x), so we can calculate this error at time _t_ as:
 
 ![cte_t equation][cte_t]
+
+where f(x) is the output of the polynomial that best fit the waypoints at point x (x-value of the current position, which in vehicle coordinates is 0).
+
+This would happen if the orientation of the car is approximately the same as the reference trajectory (which means that the orientation error is zero), which is not necessary the case.
+In the following picture, suppose that the black line is the reference path and the blue axis is the actual vehicle's orientation.
+
+![Assumptions][assumptions]
+
+With this assumption, what we are calculating as the _cross-track error_ is the blue dash line, whereas the actual minimum distance to the reference path is the red dash line. If the time step is short enough, and the error is not too big, this is a valid assumption.
+
+In a future version I would like to improve this, calling an algorithm to find the actual point in the reference path closest to the current position and use that to calculate the cross-track error.
 
 - If we think of the reference path as a straight line, the evolution of this error can be described with the following equation:
 
 ![cte equation][cte3]
 
-Actually, I am using a 3rd order polynomial to calculate the reference path based on the waypoints, but this approximation still applies if we focus on a single time step (we can think of the polynomial as a chain of straight line segments).
+Actually, I am using a 3rd order polynomial to calculate the reference path based on the waypoints, but this approximation still applies if we focus on a single time step (we can think of the polynomial as a chain of straight line segments). As before, this approximation applies better if we reduce the time step.
 
 ##### Orientation error
 As for the orientation error, it can be calculated as the difference between the current orientation and the desired orientation:
 
 ![epsi_t equation][epsi_t]
 
-so the behavior of the orientation error can be computed as:
+In this case, we are using "current - desired" instead of the usual "desired - current", but is just a matter of convention. Then, the behavior of the orientation error can be computed as:
 
 ![epsi equation][epsi2]
+
+#### Final model
+Having said that, if we add the errors to the model, the augmented state turns out to be:
+
+![State][state]
+
+and the actuators are the steering angle and the throttle:
+
+![Actuators][u]
+
 
 
 
