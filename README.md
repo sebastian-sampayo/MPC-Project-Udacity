@@ -25,6 +25,10 @@ MPC Controller Project - Self-Driving Car Engineer Nanodegree - Udacity
 [state]: ./img/aug_state.gif
 [assumptions]: ./img/assumptions.png
 [u]: ./img/u.gif
+[C1]: ./img/C1.gif
+[C2]: ./img/C3.gif
+[C3]: ./img/C2.gif
+[C]: ./img/C.gif
 
 
 ## Results
@@ -108,6 +112,29 @@ Having said that, if we add the errors to the model, the augmented state turns o
 and the actuators are the steering angle and the throttle:
 
 ![Actuators][u]
+
+
+### Cost function
+The MPC algorithm is essentialy a problem of finding the optimal solution of a non-linear system. The solution are the inputs of the model, i.e. the actuator values, that minimize a certain cost function. The construction of this function is the key of the algorithm, because it determines how the car behaves with the provided solution.
+In the first place, we would like that this cost function be proportional to the error, so when it's minimum, the error are minimum as well. Having said that I started with this:
+
+![Cost function 1][C1]
+
+where we can see the cross-track error, the orientation error and finally, the velocity error (current velocity minus reference velocity). If we put more weight on some terms of the function we can focus more on those errors, making them more important. I scaled up to 50 the orientation error, because I think that it is the most important one in order to drive stably. It would also compensate for the first assumption I made in the previous section. I also make the velocity more important than the cte because with my algorithm I need that the car speeds down in the turns in order to keeep steady. In my opinion, it can only minimize the cte when it's already driving safely on the road.
+
+Then, we also want to minimize the magnitude of the input values, because in the real life we don't want to stress the motor or the wheels.
+
+![Cost function 2][C2]
+
+In this case, I found really important that the steering angle does not saturate, in order to keep stable.
+
+Finally, to drive smoothly, we want to minimize also the derivative of the actuator values, so it doesn't change suddenly between time steps. With the same reasoning as before, I want to strongly keep an eye on the steering angle derivative, so I placed a big weight there.
+
+![Cost function 3][C3]
+
+Having all this terms, I just add them up into the cost function equation:
+
+![Cost function][C]
 
 
 
