@@ -24,7 +24,7 @@ MPC Controller Project - Self-Driving Car Engineer Nanodegree - Udacity
 [epsi2]: ./img/epsi2.gif
 [state]: ./img/aug_state.gif
 [assumptions]: ./img/assumptions.png
-[u]: ./img/u.png
+[u]: ./img/u.gif
 
 
 ## Results
