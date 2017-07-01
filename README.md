@@ -114,7 +114,7 @@ In the first place, we would like that this cost function be proportional to the
 
 ![Cost function 1][C1]
 
-where we can see the cross-track error, the orientation error and finally, the velocity error (current velocity minus reference velocity). If we put more weight on some terms of the function we can focus more on those errors, making them more important. I scaled up to 50 the orientation error, because I think that it is the most important one in order to drive stably. It also compensates for the first assumption I made in the previous section. I also make the velocity more important than the cte because with my algorithm I need that the car speeds down in the turns in order to keeep steady. In my opinion, it can only minimize the cte when it's already driving safely on the road.
+where we can see the cross-track error, the orientation error and finally, the velocity error (current velocity minus reference velocity). If we put more weight on some terms of the function we can focus more on those errors, making them more important. I scaled up to 50 the orientation error, because I think that it is the most important one in order to drive stably. It also compensates for the first assumption I made in the previous section. I also make the velocity more important than the cte because with my algorithm I need the car to speed down in the turns in order to keeep steady. In my opinion, it can only minimize the cte when it's already driving safely on the road.
 
 Then, we also want to minimize the magnitude of the input values, because in the real life we don't want to stress the motor or the wheels.
 
