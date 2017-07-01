@@ -48,7 +48,7 @@ In order to go further with this project, I also implemented an algorithm to tun
 Furthermore, there is also a delay time of 100ms between the command of the actuators and the actual execution in the simulator, which emulates what happens in the real world. This was taken into account in the algorithm achieving a great result.
 
 #### Hyperparameters
-Regarding the tuning of N and dt hyperparameters, we would like that the prediction horizon (T = N * dt) be large, so that the car can act in advance as soon as possible. It is very common to find in the literature that a duration of a few seconds is enough in automotive applications. This invites us to make N large, though increasing the computational cost.
+Regarding the tuning of N and dt (number of timesteps and length of each timestep respectively), we would like that the prediction horizon (T = N * dt) be large, so that the car can act in advance as soon as possible. It is very common to find in the literature that a duration of a few seconds is enough in automotive applications. This invites us to make N large, though increasing the computational cost.
 
 However, we also want dt to be small, so that the discrete solution of the algorithm approximates better to the continuous reference path making the system more accurate. 
 
