@@ -45,7 +45,7 @@ In order to test the controller I used a visualization tool provided by Udacity 
 
 ### Implementation
 
-The program receives in each step a list of waypoints of the desired trajectory (yellow line). Then, it calculates the reference path (green line) that the car should follow to align with the waypoints path (yellow line). Considering the kinematic model of the car, it solves the non-linear problem to output the actuators values for each time step and pass them to the simulator input. In this case, the actuators consist of the steering angle and the throttle. After a lot of tuning, the vehicle is able to drive safely at a maximum of 93mph, speeding down to 60mph when it makes a turn. It is also possible to adjust a little bit the parameters in order to increase the speed even more.
+The program receives in each step a list of waypoints of the desired trajectory (yellow line). Then, it calculates the reference path (green line) that the car should follow to align with the waypoints path (yellow line). Considering the kinematic model of the car, it solves the non-linear problem to output the actuators values for each time step and pass them to the simulator input. In this case, the actuators consist of the steering angle and the throttle. After a lot of tuning, the vehicle is able to drive safely at a maximum of 100mph, speeding down to 70mph when it makes a turn. It is also possible to adjust a little bit the parameters in order to increase the speed even more.
 
 #### Speed control
 In order to go further with this project, I also implemented an algorithm to tune the reference velocity dynamically, so that the car speeds down when a turn is coming. This is a natural reaction of a human driver that is not strictly considered by the MPC algorithm.
