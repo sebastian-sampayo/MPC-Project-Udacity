@@ -52,7 +52,7 @@ Regarding the tuning of N and dt (number of timesteps and length of each timeste
 
 However, we also want dt to be small, so that the discrete solution of the algorithm approximates better to the continuous reference path making the system more accurate. 
 
-Then, having set the horizon T to 1 or 2 seconds, we have a trade-off between N and dt, where we would like to have low computational cost, but significant approximation.
+Then, having set the horizon T to 1 or 2 seconds, we have a trade-off between N and dt, where we would like to have low computational cost, but significant approximation. After trying several combinations I found that 8 timesteps of 0.2 seconds work pretty well. With this values the MPC algorithm took approximately 10ms, that is 10% of the latency length (100ms). Taking more timesteps would require to take into account that added latency into the model. This could be a future improvement.
 
 ### Vehicle Model
 As I mentioned above, I used the kinematic model of the car to predict the behavior of the vehicle. I am not considering any lateral or longitudinal forces applied to the vehicle, so it's not the ultimate solution, but it's close enough. The state in this system consist of the _x_ and _y_ position, the magnitude of the velocity (_v_) and the orientation (_psi_):
