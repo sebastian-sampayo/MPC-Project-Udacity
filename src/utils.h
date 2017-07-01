@@ -19,6 +19,7 @@
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 
+using namespace std;
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
@@ -91,6 +92,17 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals, int order)
  * @output Current reference velocity
  */
 double calculate_ref_v(Eigen::VectorXd coeffs, double x, CppAD::AD<double> cte, CppAD::AD<double> epsi);
+
+/**
+ * transformCoordinates Transform waypoints from global to vehicle coordinates given the car's current position and orientation.
+ * @param ptsx Vector with x values of the input waypoints in global coordinates.
+ * @param ptsy Vector with y values of the input waypoints in global coordinates.
+ * @param px X value of the vehicle position in global coordinates.
+ * @param py Y value of the vehicle position in global coordinates.
+ * @param psi Orientation of the vehicle with respect to the global frame.
+ * @output A vector of Eigen::VectorXd vectors containing the x and y values of the waypoints in vehicle coordinates.
+ */
+vector<Eigen::VectorXd> transformCoordinates(vector<double> ptsx, vector<double> ptsy, double px, double py, double psi);
 
 
 #endif /* UTILS_H */

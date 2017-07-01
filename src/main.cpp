@@ -75,61 +75,52 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
           v = v * MPH2MS; // convert from mph to m/s
-          
-          // Propagate the model for an interval of time equal to the latency before calling the control algorithm.
-          double steer_angle = j[1]["steering_angle"]; // last actuator value
-          double throttle = j[1]["throttle"]; // last actuator value
-          steer_angle = -steer_angle; // Simulator stuff
-          px += v * cos(psi) * actuator_lag;
-          py += v * sin(psi) * actuator_lag;
-          psi += v * steer_angle * actuator_lag / Lf;
-          v += throttle * actuator_lag;
-          
+
           // Waypoints in global coordinates
           vector<double> ptsx = j[1]["ptsx"];
           vector<double> ptsy = j[1]["ptsy"];
           
+          // Transform waypoints from global to vehicle coorinates and 
           // Fit a polynomial with order 3 to the waypoints.
           // Note: Here we are assuming 2 things:
           //  1) The first waypoint is the closest point in the reference trajectory to the current position
           //  2) The current orientation of the vehicle is approximately the same as the orientation of the reference trajectory at the current position.
           // This may lead to inestability issues. 
           // TODO: To overcome this we could find the exact point in the reference trajectory closest to the current position, and calculate the orientation of the trajectory at that point. That way, the yellow line would be absolutely stable (as it should be, because it's a static reference).
-          const size_t waypoints_size = ptsx.size();
-          assert(waypoints_size == ptsy.size());
-          Eigen::VectorXd waypoints_x(waypoints_size);
-          Eigen::VectorXd waypoints_y(waypoints_size);
-            // Transform waypoints from global's coordinates to vehicle's coordinates
-            // Rotation coord from global to vehicle: ([T]^{VG}(psi))
-              // [ cos(psi) sin(psi)
-              //   -sin(psi) cos(psi)]
-            // Translation:
-            // waypoint_v = waypoint_g - carpos_g
-            // [x]^V = [T]^{VG}(psi) * ([x]^G - [p]^G), where x is the waypoint and p the vehicle position
-          for (size_t i = 0; i < waypoints_size; ++i) {
-            const double dx = ptsx[i] - px;
-            const double dy = ptsy[i] - py;
-            waypoints_x(i) = cos(psi) * dx + sin(psi) * dy;
-            waypoints_y(i) = -sin(psi) * dx + cos(psi) * dy;
-          }
-          
+          auto waypoints = transformCoordinates(ptsx, ptsy, px, py, psi);
+          Eigen::VectorXd& waypoints_x = waypoints[0];
+          Eigen::VectorXd& waypoints_y = waypoints[1];
+          const size_t waypoints_size = waypoints_y.size();
+
           auto coeffs = polyfit(waypoints_x, waypoints_y, 3);
 
           // CTE: 
           // The minimum distance between the reference trajectory and the current position .
           // Note: Read the assumption I mentioned above.
-          const double cte = polyeval(coeffs, 0);
+          double cte = polyeval(coeffs, 0);
           
           // Orientation error
           // Calculate predicted path orientation, as the angle of the slope of the polynomial at that point. The slope is calculated with the derivative of the polynomial.
           // Note: Read the assumption I mentioned above.
           const double dpy = dpolyeval(coeffs, 0);
-          const double epsi = - atan(dpy);
-
+          double epsi = - atan(dpy);
+          
+          double steer_angle = j[1]["steering_angle"]; // last actuator value
+          double throttle = j[1]["throttle"]; // last actuator value
+          steer_angle = -steer_angle; // Simulator stuff
+          // Position and orientation are now null in vehicle's coordinate system, but will change after the model propagation.
+          px = py = psi = 0;
+          // Propagate the model for an interval of time equal to the latency before calling the control algorithm.
+          px += v * cos(psi) * actuator_lag;
+          py += v * sin(psi) * actuator_lag;
+          psi += v * steer_angle * actuator_lag / Lf;
+          cte += v * sin(epsi) * actuator_lag;
+          epsi += v * steer_angle / Lf * actuator_lag;
+          v += throttle * actuator_lag;
+          
           // Call the MPC algorithm to calculate steering angle and throttle.
           Eigen::VectorXd state(6);
-          // Position and orientation are null in vehicle's coordinate system.
-          state << 0, 0, 0, v, cte, epsi;
+          state << px, py, psi, v, cte, epsi;
 
           auto solution = mpc.Solve(state, coeffs);
 

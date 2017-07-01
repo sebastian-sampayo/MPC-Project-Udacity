@@ -134,3 +134,26 @@ double calculate_ref_v(Eigen::VectorXd coeffs, double x, CppAD::AD<double> cte, 
 
   return v;
 }
+
+//------------------------------------------------------------------------------------------------
+vector<Eigen::VectorXd> transformCoordinates(vector<double> ptsx, vector<double> ptsy, double px, double py, double psi) {
+  const size_t waypoints_size = ptsx.size();
+  assert(waypoints_size == ptsy.size());
+  Eigen::VectorXd waypoints_x(waypoints_size);
+  Eigen::VectorXd waypoints_y(waypoints_size);
+    // Transform waypoints from global's coordinates to vehicle's coordinates
+    // Rotation coord from global to vehicle: ([T]^{VG}(psi))
+      // [ cos(psi) sin(psi)
+      //   -sin(psi) cos(psi)]
+    // Translation:
+    // waypoint_v = waypoint_g - carpos_g
+    // [x]^V = [T]^{VG}(psi) * ([x]^G - [p]^G), where x is the waypoint and p the vehicle position
+  for (size_t i = 0; i < waypoints_size; ++i) {
+    const double dx = ptsx[i] - px;
+    const double dy = ptsy[i] - py;
+    waypoints_x(i) = cos(psi) * dx + sin(psi) * dy;
+    waypoints_y(i) = -sin(psi) * dx + cos(psi) * dy;
+  }
+
+  return {waypoints_x, waypoints_y};
+}

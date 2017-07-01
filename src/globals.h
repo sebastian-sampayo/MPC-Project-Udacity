@@ -41,8 +41,8 @@ const double Lf = 2.67;
 // If the radius of curvature is lower than R_min, the reference velocity will be ref_v_min
 // If the radius of curvature is higher then R_max, the reference velocity will be ref_v_max
 // In the middle we extrapolate the velocity.
-const double ref_v_max = 100 *0.447; // m/s
-const double ref_v_min = 60 *0.447; // m/s
+const double ref_v_max = 120 *0.447; // m/s
+const double ref_v_min = 70 *0.447; // m/s
 const double R_max = 300; // m
 const double R_min = 25; // m
 
