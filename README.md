@@ -5,12 +5,6 @@ This work is part of the Self-Driving Car Engineer Nanodegree Program at Udacity
 
 ---
 
-In this project, I implemented in C++ a MPC controller to maneuver an autonomous driving car around a track in a simulator. 
-
-
-MPC Controller Project - Self-Driving Car Engineer Nanodegree - Udacity
-
-
 
 [//]: # (Image References)
 [simulation]: ./img/turn80mph.png
